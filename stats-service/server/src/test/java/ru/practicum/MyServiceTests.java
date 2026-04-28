@@ -11,7 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.model.EndpointHit;
 import ru.practicum.stats.repository.HitRepository;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
