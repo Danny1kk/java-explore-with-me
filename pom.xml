@@ -39,7 +39,7 @@
 			<dependency>
 				<groupId>org.projectlombok</groupId>
 				<artifactId>lombok</artifactId>
-				<version>${lombok.version}</version>
+				<version>1.18.30</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -197,6 +197,20 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-checkstyle-plugin</artifactId>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<version>3.10.1</version>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+									<version>1.18.30</version>
+								</path>
+							</annotationProcessorPaths>
+						</configuration>
 					</plugin>
 					<plugin>
 						<groupId>com.github.spotbugs</groupId>
