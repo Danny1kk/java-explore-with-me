@@ -25,6 +25,8 @@
 	<properties>
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<mapstruct.version>1.5.5.Final</mapstruct.version>
+		<lombok.version>1.18.30</lombok.version>
 	</properties>
 
 	<build>
@@ -174,7 +176,8 @@
 							<dependency>
 								<groupId>org.mapstruct</groupId>
 								<artifactId>mapstruct</artifactId>
-								<version>1.5.5.Final</version> </dependency>
+								<version>1.5.5.Final</version>
+							</dependency>
 						</dependencies>
 					</plugin>
 					<plugin>
@@ -188,6 +191,7 @@
 					<plugin>
 						<groupId>com.github.spotbugs</groupId>
 						<artifactId>spotbugs-maven-plugin</artifactId>
+						<version>4.8.6.0</version>
 					</plugin>
 				</plugins>
 			</reporting>
