@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 
-public record EndpointHitDto (
+public record EndpointHitDto(
     Long id,
     String app,
     String uri,
