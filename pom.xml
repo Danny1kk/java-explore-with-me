@@ -63,6 +63,16 @@
 							<artifactId>checkstyle</artifactId>
 							<version>10.3</version>
 						</dependency>
+						<dependency>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct</artifactId>
+							<version>${mapstruct.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</dependency>
 					</dependencies>
 				</plugin>
 				<plugin>
