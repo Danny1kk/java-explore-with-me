@@ -1,8 +1,17 @@
 package ru.practicum.stats.dto;
 
-public final class StatsConstants {
-    public static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+import lombok.*;
 
-    private StatsConstants() {
-    }
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public final class StatsConstants {
+    private LocalDateTime start;
+    private LocalDateTime end;
+    private String[] uris;
+    private Boolean unique;
 }

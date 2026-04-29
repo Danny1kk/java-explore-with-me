@@ -1,5 +1,6 @@
 package ru.practicum.stats.client;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,7 +22,7 @@ public class StatsClient {
     private final String baseUrl;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public StatsClient(String baseUrl) {
+    public StatsClient(RestTemplate restTemplate, @Value("${stats-server.url}") String baseUrl) {
         this.restTemplate = new RestTemplate();
         this.baseUrl = baseUrl;
     }

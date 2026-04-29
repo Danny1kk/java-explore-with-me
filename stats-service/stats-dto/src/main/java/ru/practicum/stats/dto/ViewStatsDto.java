@@ -1,4 +1,14 @@
 package ru.practicum.stats.dto;
 
-public record ViewStatsDto(String app, String uri, Long hits) {
+import lombok.*;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ViewStatsDto {
+    private String app;
+    private String uri;
+    private Long hits;
 }
