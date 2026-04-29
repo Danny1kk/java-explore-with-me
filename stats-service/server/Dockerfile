@@ -1,3 +1,3 @@
 FROM amazoncorretto:17
-COPY target/stats-server-*.jar app.jar
+COPY target/server-*.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]

@@ -10,7 +10,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>dto</artifactId>
+    <artifactId>stats-dto</artifactId>
 
     <dependencies>
         <dependency>
