@@ -1,7 +1,7 @@
 package ru.practicum.stats.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotBlank;
+import javax.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.LocalDateTime;
