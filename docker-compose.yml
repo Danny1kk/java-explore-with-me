@@ -27,6 +27,13 @@ services:
       - POSTGRES_USER=practicum
       - POSTGRES_PASSWORD=practicum
 
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U practicum -d stats" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # Основной сервис
   ewm-service:
     build: ./ewm-service
@@ -34,7 +41,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - ewm-db
+      ewm-db:
+        condition: service_healthy
 
   # Основная база данных
   ewm-db:
@@ -46,3 +54,10 @@ services:
       - POSTGRES_DB=ewm
       - POSTGRES_USER=practicum
       - POSTGRES_PASSWORD=practicum
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U practicum -d ewm" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
