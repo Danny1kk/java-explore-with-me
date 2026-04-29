@@ -5,7 +5,7 @@ services:
   stats-server:
     build:
       context: .
-      dockerfile: stats-service/server/dockerfile
+      dockerfile: stats-service/server/Dockerfile
     container_name: stats-server
     ports:
       - "9090:9090"
@@ -20,15 +20,14 @@ services:
 
   # База данных для статистики
   stats-db:
-    image: postgres:14-alpine # Alpine — значит "легкий", чтобы быстрее качалось
+    image: postgres:14-alpine
     container_name: stats-db
     ports:
-      - "6543:5432" # 6543 — чтобы зайти в базу через IDEA и не путать с основной
+      - "6543:5432"
     environment:
       - POSTGRES_DB=stats
       - POSTGRES_USER=practicum
       - POSTGRES_PASSWORD=practicum
-
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U practicum -d stats" ]
       interval: 5s
@@ -38,7 +37,9 @@ services:
 
   # Основной сервис
   ewm-service:
-    build: ./ewm-service
+    build:
+      context: .
+      dockerfile: ewm-service/Dockerfile
     container_name: ewm-service
     ports:
       - "8080:8080"
@@ -51,12 +52,11 @@ services:
     image: postgres:14-alpine
     container_name: ewm-db
     ports:
-      - "5432:5432" # Оставляем стандартный порт
+      - "5432:5432"
     environment:
       - POSTGRES_DB=ewm
       - POSTGRES_USER=practicum
       - POSTGRES_PASSWORD=practicum
-
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U practicum -d ewm" ]
       interval: 5s
