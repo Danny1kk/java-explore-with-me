@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # Наш сервис статистики
   stats-server:
     build:
       context: .
@@ -10,15 +7,19 @@ services:
     ports:
       - "9090:9090"
     environment:
-      # Передаем настройки
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - SPRING_DATASOURCE_USERNAME=practicum
       - SPRING_DATASOURCE_PASSWORD=practicum
     depends_on:
       stats-db:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9090/actuator/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
-  # База данных для статистики
   stats-db:
     image: postgres:14-alpine
     container_name: stats-db
@@ -35,7 +36,6 @@ services:
       retries: 5
       start_period: 10s
 
-  # Основной сервис
   ewm-service:
     build:
       context: .
@@ -46,8 +46,9 @@ services:
     depends_on:
       ewm-db:
         condition: service_healthy
+      stats-server:
+        condition: service_healthy
 
-  # Основная база данных
   ewm-db:
     image: postgres:14-alpine
     container_name: ewm-db
