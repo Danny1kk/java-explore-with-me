@@ -1,1 +1,0 @@
--- Hibernate will create tables automatically via ddl-auto=update
