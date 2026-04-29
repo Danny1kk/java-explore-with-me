@@ -43,7 +43,6 @@ class MyServiceTests {
     @Test
     void shouldCreateHit() throws Exception {
         EndpointHitDto endpointHitDto = new EndpointHitDto(
-                null,
                 "ewm-main-service",
                 "/events/1",
                 "192.168.0.1",
