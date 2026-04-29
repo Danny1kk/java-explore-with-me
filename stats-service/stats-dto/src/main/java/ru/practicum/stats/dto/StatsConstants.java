@@ -1,17 +1,8 @@
 package ru.practicum.stats.dto;
 
-import lombok.*;
+import lombok.experimental.UtilityClass;
 
-import java.time.LocalDateTime;
-
-@Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public final class StatsConstants {
-    private LocalDateTime start;
-    private LocalDateTime end;
-    private String[] uris;
-    private Boolean unique;
+@UtilityClass
+public class StatsConstants {
+    public static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 }
