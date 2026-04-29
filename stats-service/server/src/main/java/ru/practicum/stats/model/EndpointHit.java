@@ -24,11 +24,9 @@ public class EndpointHit {
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
 
-    // JPA требует конструктор без аргументов
     protected EndpointHit() {
     }
 
-    // Публичный конструктор со всеми полями
     public EndpointHit(Long id, String app, String uri, String ip, LocalDateTime timestamp) {
         this.id = id;
         this.app = app;
@@ -37,14 +35,26 @@ public class EndpointHit {
         this.timestamp = timestamp;
     }
 
-    // Геттеры
-    public Long getId() { return id; }
-    public String getApp() { return app; }
-    public String getUri() { return uri; }
-    public String getIp() { return ip; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    public Long getId() {
+        return id;
+    }
 
-    // equals и hashCode по ID, как требует Hibernate
+    public String getApp() {
+        return app;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -60,12 +70,12 @@ public class EndpointHit {
 
     @Override
     public String toString() {
-        return "EndpointHit{" +
-                "id=" + id +
-                ", app='" + app + '\'' +
-                ", uri='" + uri + '\'' +
-                ", ip='" + ip + '\'' +
-                ", timestamp=" + timestamp +
-                '}';
+        return "EndpointHit{"
+                + "id=" + id
+                + ", app='" + app + '\''
+                + ", uri='" + uri + '\''
+                + ", ip='" + ip + '\''
+                + ", timestamp=" + timestamp
+                + '}';
     }
 }
