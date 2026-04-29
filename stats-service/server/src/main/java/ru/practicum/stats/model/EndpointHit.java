@@ -1,19 +1,13 @@
 package ru.practicum.stats.model;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "hits")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
 public class EndpointHit {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,4 +23,49 @@ public class EndpointHit {
 
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
+
+    // JPA требует конструктор без аргументов
+    protected EndpointHit() {
+    }
+
+    // Публичный конструктор со всеми полями
+    public EndpointHit(Long id, String app, String uri, String ip, LocalDateTime timestamp) {
+        this.id = id;
+        this.app = app;
+        this.uri = uri;
+        this.ip = ip;
+        this.timestamp = timestamp;
+    }
+
+    // Геттеры
+    public Long getId() { return id; }
+    public String getApp() { return app; }
+    public String getUri() { return uri; }
+    public String getIp() { return ip; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+
+    // equals и hashCode по ID, как требует Hibernate
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof EndpointHit)) return false;
+        EndpointHit that = (EndpointHit) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "EndpointHit{" +
+                "id=" + id +
+                ", app='" + app + '\'' +
+                ", uri='" + uri + '\'' +
+                ", ip='" + ip + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
+    }
 }
