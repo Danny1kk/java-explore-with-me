@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.5</version>
+		<version>2.7.18</version>
 		<relativePath/>
 	</parent>
 
@@ -23,47 +23,49 @@
 	</modules>
 
 	<properties>
-		<java.version>11</java.version>
+		<java.version>17</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<mapstruct.version>1.5.3.Final</mapstruct.version>
-		<lombok.version>1.18.24</lombok.version>
+		<mapstruct.version>1.5.5.Final</mapstruct.version>
+		<lombok.version>1.18.30</lombok.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.mapstruct</groupId>
-				<artifactId>mapstruct</artifactId>
-				<version>${mapstruct.version}</version>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>2.7.18</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
+
 			<dependency>
-				<groupId>org.projectlombok</groupId>
-				<artifactId>lombok</artifactId>
-				<version>${lombok.version}</version>
+				<groupId>ru.practicum</groupId>
+				<artifactId>stats-dto</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>ru.practicum</groupId>
+				<artifactId>stats-client</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>ru.practicum</groupId>
+				<artifactId>stats-server</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>ru.practicum</groupId>
+				<artifactId>ewm-service</artifactId>
+				<version>${project.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
-	</dependencies>
-
 	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-			</plugin>
-		</plugins>
-
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -99,12 +101,22 @@
 							<artifactId>checkstyle</artifactId>
 							<version>10.3</version>
 						</dependency>
+						<dependency>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct</artifactId>
+							<version>${mapstruct.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</dependency>
 					</dependencies>
 				</plugin>
 				<plugin>
 					<groupId>com.github.spotbugs</groupId>
 					<artifactId>spotbugs-maven-plugin</artifactId>
-					<version>4.7.0.0</version>
+					<version>4.8.6.0</version>
 					<configuration>
 						<effort>Max</effort>
 						<threshold>High</threshold>
@@ -188,7 +200,6 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-
 	<profiles>
 		<profile>
 			<id>check</id>
@@ -209,6 +220,7 @@
 					<plugin>
 						<groupId>com.github.spotbugs</groupId>
 						<artifactId>spotbugs-maven-plugin</artifactId>
+						<version>4.8.6.0</version>
 					</plugin>
 				</plugins>
 			</reporting>
@@ -225,4 +237,5 @@
 			</build>
 		</profile>
 	</profiles>
+
 </project>
