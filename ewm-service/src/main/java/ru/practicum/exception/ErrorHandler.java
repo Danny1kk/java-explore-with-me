@@ -1,6 +1,8 @@
 package ru.practicum.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,6 +34,20 @@ public class ErrorHandler {
                 .build();
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleValidation(MethodArgumentNotValidException e) {
+        String message = e.getFieldError() != null
+                ? e.getFieldError().getDefaultMessage()
+                : "Ошибка валидации";
+        return ApiError.builder()
+                .status(HttpStatus.BAD_REQUEST.name())
+                .reason("Incorrectly made request.")
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
     @ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(ConflictException e) {
@@ -39,6 +55,17 @@ public class ErrorHandler {
                 .status(HttpStatus.CONFLICT.name())
                 .reason("Integrity constraint has been violated.")
                 .message(e.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleDataIntegrity(DataIntegrityViolationException e) {
+        return ApiError.builder()
+                .status(HttpStatus.CONFLICT.name())
+                .reason("Integrity constraint has been violated.")
+                .message(e.getMostSpecificCause().getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
     }

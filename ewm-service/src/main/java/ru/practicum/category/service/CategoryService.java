@@ -8,6 +8,7 @@ import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
+import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final EventRepository eventRepository;
 
     @Transactional
     public CategoryDto create(NewCategoryDto dto) {
@@ -45,6 +47,12 @@ public class CategoryService {
     public void delete(Long catId) {
         Category category = categoryRepository.findById(catId)
                 .orElseThrow(() -> new NotFoundException("Категория с id=" + catId + " не найдена"));
+
+        // Проверка на наличие связанных событий
+        if (eventRepository.existsByCategoryId(catId)) {
+            throw new ConflictException("Категория не является пустой");
+        }
+
         categoryRepository.delete(category);
     }
 
