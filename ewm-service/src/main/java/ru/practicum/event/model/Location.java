@@ -15,4 +15,4 @@ import javax.persistence.Embeddable;
 public class Location {
     private Double lat;
     private Double lon;
-}//
+}
