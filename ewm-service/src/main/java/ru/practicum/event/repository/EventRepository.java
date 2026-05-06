@@ -2,26 +2,35 @@ package ru.practicum.event.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ru.practicum.event.model.Event;
 import ru.practicum.event.enums.EventState;
+import ru.practicum.event.model.Event;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     boolean existsByCategoryId(Long categoryId);
 
     // Поиск событий по инициатору с пагинацией
+    @EntityGraph(attributePaths = {"category", "initiator"})
     Page<Event> findByInitiatorId(Long initiatorId, Pageable pageable);
 
     // Поиск события по id и инициатору
-    Event findByIdAndInitiatorId(Long eventId, Long initiatorId);
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    Optional<Event> findByIdAndInitiatorId(Long eventId, Long initiatorId);
+
+    @Override
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    Optional<Event> findById(Long eventId);
 
     // Публичный поиск: только опубликованные события, с фильтрами
+    @EntityGraph(attributePaths = {"category", "initiator"})
     @Query("SELECT e FROM Event e " +
             "WHERE (:text IS NULL OR LOWER(e.annotation) LIKE LOWER(CONCAT('%', :text, '%')) " +
             "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :text, '%'))) " +
@@ -38,6 +47,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                              Pageable pageable);
 
     // Админский поиск: фильтр по пользователям, статусам, категориям, датам
+    @EntityGraph(attributePaths = {"category", "initiator"})
     @Query("SELECT e FROM Event e " +
             "WHERE (:users IS NULL OR e.initiator.id IN :users) " +
             "AND (:states IS NULL OR e.state IN :states) " +
