@@ -1,6 +1,7 @@
 package ru.practicum.event.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,16 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.stats.client.StatsClient;
+import ru.practicum.stats.dto.EndpointHitDto;
+import ru.practicum.stats.dto.ViewStatsDto;
 import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +36,7 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final StatsClient statsClient;
 
     // ==================== Вспомогательные методы маппинга ====================
 
@@ -177,21 +183,25 @@ public class EventService {
 
     public List<EventShortDto> searchPublic(String text, List<Long> categories, Boolean paid,
                                             LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                            Boolean onlyAvailable, String sort,
-                                            int from, int size) {
+                                            Boolean onlyAvailable, String sort, int from, int size) {
+
         Pageable pageable = PageRequest.of(from / size, size);
 
-        // Если диапазон дат не указан, берём события, которые произойдут позже текущего момента
         if (rangeStart == null) rangeStart = LocalDateTime.now();
         if (rangeEnd == null) rangeEnd = LocalDateTime.now().plusYears(100);
 
-        // Валидация дат
         if (rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Дата начала диапазона не может быть позже даты конца");
         }
 
-        return eventRepository.searchPublic(text, categories, paid, rangeStart, rangeEnd, pageable)
-                .stream()
+        Page<Event> eventPage = eventRepository.searchPublic(text, categories, paid,
+                rangeStart, rangeEnd, pageable);
+
+        List<Event> events = eventPage.getContent();
+
+        enrichEventsWithViews(events);   // ← важно!
+
+        return events.stream()
                 .map(this::toShortDto)
                 .collect(Collectors.toList());
     }
@@ -200,10 +210,11 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
 
-        // Публично доступны только опубликованные события
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Событие с id=" + eventId + " не найдено");
         }
+
+        enrichEventsWithViews(List.of(event));   // ← важно!
 
         return toFullDto(event);
     }
@@ -267,5 +278,60 @@ public class EventService {
         }
 
         return toFullDto(eventRepository.save(event));
+    }
+
+    // ==================== Методы для статистики ====================
+
+    public void saveHit(Long eventId, String ip) {
+        try {
+            statsClient.hit(EndpointHitDto.builder()
+                    .app("ewm-main-service")
+                    .uri("/events/" + eventId)
+                    .ip(ip)
+                    .timestamp(LocalDateTime.now())
+                    .build());
+        } catch (Exception e) {
+            // Статистика не должна ломать основной сервис
+            System.err.println("Не удалось отправить hit для события " + eventId + ": " + e.getMessage());
+            // или используй log.error(...)
+        }
+    }
+
+    public void saveHitForEvents(List<EventShortDto> events, String ip) {
+        if (events == null || events.isEmpty()) {
+            return;
+        }
+        events.forEach(event -> saveHit(event.getId(), ip));
+    }
+
+    private void enrichEventsWithViews(List<Event> events) {
+        if (events.isEmpty()) return;
+
+        List<String> uris = events.stream()
+                .map(event -> "/events/" + event.getId())
+                .toList();
+
+        try {
+            List<ViewStatsDto> stats = statsClient.getStats(
+                    LocalDateTime.now().minusYears(5),
+                    LocalDateTime.now().plusYears(1),
+                    uris,
+                    true
+            );
+
+            Map<String, Long> viewsMap = stats.stream()
+                    .collect(Collectors.toMap(
+                            ViewStatsDto::getUri,
+                            ViewStatsDto::getHits,
+                            (a, b) -> a > b ? a : b
+                    ));
+
+            events.forEach(event -> {
+                Long views = viewsMap.getOrDefault("/events/" + event.getId(), 0L);
+                event.setViews(views);
+            });
+        } catch (Exception e) {
+            System.err.println("Не удалось получить статистику просмотров: " + e.getMessage());
+        }
     }
 }
