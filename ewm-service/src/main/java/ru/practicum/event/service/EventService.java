@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
 import ru.practicum.event.dto.*;
@@ -37,10 +38,7 @@ public class EventService {
         EventFullDto dto = new EventFullDto();
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
-        dto.setCategory(new ru.practicum.category.dto.CategoryDto() {{
-            setId(event.getCategory().getId());
-            setName(event.getCategory().getName());
-        }});
+        dto.setCategory(toCategoryDto(event.getCategory()));
         dto.setConfirmedRequests(event.getConfirmedRequests());
         dto.setCreatedOn(event.getCreatedOn());
         dto.setDescription(event.getDescription());
@@ -61,10 +59,7 @@ public class EventService {
         EventShortDto dto = new EventShortDto();
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
-        dto.setCategory(new ru.practicum.category.dto.CategoryDto() {{
-            setId(event.getCategory().getId());
-            setName(event.getCategory().getName());
-        }});
+        dto.setCategory(toCategoryDto(event.getCategory()));
         dto.setConfirmedRequests(event.getConfirmedRequests());
         dto.setEventDate(event.getEventDate());
         dto.setInitiator(toUserShort(event.getInitiator()));
@@ -78,6 +73,13 @@ public class EventService {
         UserShortDto dto = new UserShortDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
+        return dto;
+    }
+
+    private CategoryDto toCategoryDto(Category category) {
+        CategoryDto dto = new CategoryDto();
+        dto.setId(category.getId());
+        dto.setName(category.getName());
         return dto;
     }
 
@@ -122,19 +124,17 @@ public class EventService {
     }
 
     public EventFullDto getByUserAndEvent(Long userId, Long eventId) {
-        Event event = eventRepository.findByIdAndInitiatorId(eventId, userId);
-        if (event == null) {
-            throw new NotFoundException("Событие с id=" + eventId + " не найдено у пользователя с id=" + userId);
-        }
+        Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
+                .orElseThrow(() -> new NotFoundException(
+                        "Событие с id=" + eventId + " не найдено у пользователя с id=" + userId));
         return toFullDto(event);
     }
 
     @Transactional
     public EventFullDto updateByUser(Long userId, Long eventId, UpdateEventUserRequest dto) {
-        Event event = eventRepository.findByIdAndInitiatorId(eventId, userId);
-        if (event == null) {
-            throw new NotFoundException("Событие с id=" + eventId + " не найдено у пользователя с id=" + userId);
-        }
+        Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
+                .orElseThrow(() -> new NotFoundException(
+                        "Событие с id=" + eventId + " не найдено у пользователя с id=" + userId));
 
         // Можно изменять только отменённые или ожидающие модерацию события
         if (event.getState() != EventState.PENDING && event.getState() != EventState.CANCELED) {
