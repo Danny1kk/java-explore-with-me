@@ -16,6 +16,12 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.request.dto.EventRequestStatusUpdateResult;
+import ru.practicum.request.dto.ParticipationRequestDto;
+import ru.practicum.request.model.ParticipationRequest;
+import ru.practicum.request.model.RequestStatus;
+import ru.practicum.request.repository.RequestRepository;
 import ru.practicum.stats.client.StatsClient;
 import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
@@ -24,8 +30,10 @@ import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +44,7 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final RequestRepository requestRepository;
     private final StatsClient statsClient;
 
     // ==================== Вспомогательные методы маппинга ====================
@@ -115,7 +124,7 @@ public class EventService {
         event.setRequestModeration(dto.getRequestModeration() != null ? dto.getRequestModeration() : true);
         event.setTitle(dto.getTitle());
         event.setInitiator(initiator);
-        event.setState(EventState.PUBLISHED);
+        event.setState(EventState.PENDING);
         event.setCreatedOn(LocalDateTime.now());
 
         return toFullDto(eventRepository.save(event));
@@ -333,5 +342,82 @@ public class EventService {
         } catch (Exception e) {
             System.err.println("Не удалось получить статистику просмотров: " + e.getMessage());
         }
+    }
+// ==================== Методы для заявок на участие ====================
+
+    public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
+        // Проверяем, что событие принадлежит пользователю
+        Optional<Event> event = eventRepository.findByIdAndInitiatorId(eventId, userId);
+        if (event.isEmpty()) {
+            throw new NotFoundException("Event with id=" + eventId + " was not found");
+        }
+
+        return requestRepository.findByEventId(eventId).stream()
+                .map(this::toParticipationRequestDto)
+                .toList();
+    }
+
+    @Transactional
+    public EventRequestStatusUpdateResult updateEventRequestsStatus(
+            Long userId,
+            Long eventId,
+            EventRequestStatusUpdateRequest requestDto) {
+
+        Optional<Event> event = eventRepository.findByIdAndInitiatorId(eventId, userId);
+        if (event.isEmpty()) {
+            throw new NotFoundException("Event with id=" + eventId + " was not found");
+        }
+
+        RequestStatus status = RequestStatus.valueOf(requestDto.getStatus().toUpperCase());
+
+        List<ParticipationRequest> requestsToUpdate = requestRepository
+                .findAllByIdInAndEventIdAndStatus(requestDto.getRequestIds(), eventId, RequestStatus.PENDING);
+
+        if (requestsToUpdate.size() != requestDto.getRequestIds().size()) {
+            throw new ConflictException("Request must have status PENDING");
+        }
+
+        List<ParticipationRequest> confirmed = new ArrayList<>();
+        List<ParticipationRequest> rejected = new ArrayList<>();
+
+        if (status == RequestStatus.REJECTED) {
+            requestsToUpdate.forEach(req -> {
+                req.setStatus(RequestStatus.REJECTED);
+                rejected.add(req);
+            });
+        } else { // CONFIRMED
+            long alreadyConfirmed = requestRepository.countConfirmedRequests(eventId);
+            int limit = event.get().getParticipantLimit();
+
+            int availableSlots = (limit == 0) ? Integer.MAX_VALUE : limit - (int) alreadyConfirmed;
+
+            for (ParticipationRequest req : requestsToUpdate) {
+                if (availableSlots > 0) {
+                    req.setStatus(RequestStatus.CONFIRMED);
+                    confirmed.add(req);
+                    availableSlots--;
+                } else {
+                    req.setStatus(RequestStatus.REJECTED);
+                    rejected.add(req);
+                }
+            }
+        }
+
+        requestRepository.saveAll(requestsToUpdate);
+
+        return EventRequestStatusUpdateResult.builder()
+                .confirmedRequests(confirmed.stream().map(this::toParticipationRequestDto).toList())
+                .rejectedRequests(rejected.stream().map(this::toParticipationRequestDto).toList())
+                .build();
+    }
+
+    private ParticipationRequestDto toParticipationRequestDto(ParticipationRequest request) {
+        return ParticipationRequestDto.builder()
+                .id(request.getId())
+                .created(request.getCreated())
+                .event(request.getEvent().getId())
+                .requester(request.getRequester().getId())
+                .status(request.getStatus().name())
+                .build();
     }
 }
