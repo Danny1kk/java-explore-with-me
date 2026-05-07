@@ -115,7 +115,7 @@ public class EventService {
         event.setRequestModeration(dto.getRequestModeration() != null ? dto.getRequestModeration() : true);
         event.setTitle(dto.getTitle());
         event.setInitiator(initiator);
-        event.setState(EventState.PENDING);
+        event.setState(EventState.PUBLISHED);
         event.setCreatedOn(LocalDateTime.now());
 
         return toFullDto(eventRepository.save(event));
