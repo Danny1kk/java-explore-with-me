@@ -7,20 +7,22 @@ import ru.practicum.request.model.ParticipationRequest;
 import ru.practicum.request.model.RequestStatus;
 
 import java.util.List;
-
+import java.util.Optional;
 
 public interface RequestRepository extends JpaRepository<ParticipationRequest, Long> {
 
-    boolean existsByRequesterIdAndEventId(Long requesterId, Long eventId);
-
     List<ParticipationRequest> findByRequesterId(Long requesterId);
-
-    @Query("SELECT COUNT(r) FROM ParticipationRequest r " +
-            "WHERE r.event.id = :eventId AND r.status = 'CONFIRMED'")
-    Long countConfirmedRequests(@Param("eventId") Long eventId);
 
     List<ParticipationRequest> findByEventId(Long eventId);
 
-    List<ParticipationRequest> findAllByIdInAndEventIdAndStatus(
-            List<Long> ids, Long eventId, RequestStatus status);
+    Optional<ParticipationRequest> findByIdAndRequesterId(Long requestId, Long requesterId);
+
+    boolean existsByEventIdAndRequesterId(Long eventId, Long requesterId);
+
+    long countByEventIdAndStatus(Long eventId, RequestStatus status);
+
+    @Query("SELECT r FROM ParticipationRequest r " +
+            "WHERE r.event.id = :eventId AND r.status = :status")
+    List<ParticipationRequest> findByEventIdAndStatus(@Param("eventId") Long eventId,
+                                                      @Param("status") RequestStatus status);
 }

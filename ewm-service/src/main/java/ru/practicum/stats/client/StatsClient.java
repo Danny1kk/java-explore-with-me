@@ -32,9 +32,6 @@ public class StatsClient {
         this.baseUrl = baseUrl;
     }
 
-    /**
-     * Отправка информации о просмотре
-     */
     public void hit(EndpointHitDto hitDto) {
         try {
             restTemplate.postForEntity(baseUrl + "/hit", hitDto, Object.class);
@@ -43,9 +40,6 @@ public class StatsClient {
         }
     }
 
-    /**
-     * Получение статистики просмотров
-     */
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end,
                                        List<String> uris, Boolean unique) {
         try {

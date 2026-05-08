@@ -1,21 +1,13 @@
 package ru.practicum.request.dto;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class EventRequestStatusUpdateRequest {
-
-    @NotEmpty(message = "Request ids must not be empty")
     private List<Long> requestIds;
-
-    @NotNull(message = "Status must not be null")
-    private String status;  // "CONFIRMED" или "REJECTED"
+    private String status; // CONFIRMED / REJECTED
 }
