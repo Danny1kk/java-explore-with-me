@@ -1,18 +1,20 @@
 package ru.practicum.request.model;
 
-import javax.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import ru.practicum.event.model.Event;
 import ru.practicum.user.model.User;
+
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "requests")
+@Table(name = "requests",
+        uniqueConstraints = @UniqueConstraint(name = "uq_request", columnNames = {"event_id", "requester_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ParticipationRequest {
 
     @Id
@@ -32,5 +34,5 @@ public class ParticipationRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RequestStatus status = RequestStatus.PENDING;
+    private RequestStatus status;
 }

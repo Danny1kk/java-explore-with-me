@@ -34,6 +34,7 @@ public class PublicEventController {
                 text, categories, paid, rangeStart, rangeEnd,
                 onlyAvailable, sort, from, size);
 
+        // Отправка статистики просмотров списка
         eventService.saveHitForEvents(events, request.getRemoteAddr());
 
         return events;
@@ -43,6 +44,7 @@ public class PublicEventController {
     public EventFullDto get(@PathVariable Long id, HttpServletRequest request) {
         EventFullDto event = eventService.getPublic(id);
 
+        // Отправка статистики просмотра одного события
         eventService.saveHit(id, request.getRemoteAddr());
 
         return event;
