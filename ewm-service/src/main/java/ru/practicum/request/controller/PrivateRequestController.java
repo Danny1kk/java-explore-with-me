@@ -15,23 +15,21 @@ public class PrivateRequestController {
 
     private final RequestService requestService;
 
-    @GetMapping
-    public List<ParticipationRequestDto> getUserRequests(@PathVariable Long userId) {
-        return requestService.getUserRequests(userId);
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ParticipationRequestDto createRequest(
-            @PathVariable Long userId,
-            @RequestParam Long eventId) {   // ← обязательно @RequestParam
+    public ParticipationRequestDto create(@PathVariable Long userId,
+                                          @RequestParam Long eventId) {
         return requestService.create(userId, eventId);
     }
 
+    @GetMapping
+    public List<ParticipationRequestDto> getByUser(@PathVariable Long userId) {
+        return requestService.getByUser(userId);
+    }
+
     @PatchMapping("/{requestId}/cancel")
-    public ParticipationRequestDto cancelRequest(
-            @PathVariable Long userId,
-            @PathVariable Long requestId) {
+    public ParticipationRequestDto cancel(@PathVariable Long userId,
+                                          @PathVariable Long requestId) {
         return requestService.cancel(userId, requestId);
     }
 }
