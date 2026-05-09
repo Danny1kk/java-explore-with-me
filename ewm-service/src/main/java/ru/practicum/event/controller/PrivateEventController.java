@@ -22,7 +22,7 @@ import java.util.List;
 public class PrivateEventController {
 
     private final EventService eventService;
-    private final RequestService requestService; // запросы
+    private final RequestService requestService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -51,7 +51,7 @@ public class PrivateEventController {
         return eventService.updateByUser(userId, eventId, dto);
     }
 
-    // ==================== Методы для запросов ====================
+    // Методы для запросов
     @GetMapping("/{eventId}/requests")
     public List<ParticipationRequestDto> getEventRequests(@PathVariable Long userId,
                                                           @PathVariable Long eventId) {
