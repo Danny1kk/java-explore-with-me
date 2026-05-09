@@ -1,6 +1,7 @@
 package ru.practicum.event.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,17 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.request.repository.RequestRepository;
+import ru.practicum.request.model.RequestStatus;
+import ru.practicum.stats.client.StatsClient;
+import ru.practicum.stats.dto.ViewStatsDto;
 import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +37,8 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final StatsClient statsClient;
+    private final RequestRepository requestRepository;
 
     // ==================== Вспомогательные методы маппинга ====================
 
@@ -39,7 +47,7 @@ public class EventService {
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
         dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(event.getConfirmedRequests());
+        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
         dto.setCreatedOn(event.getCreatedOn());
         dto.setDescription(event.getDescription());
         dto.setEventDate(event.getEventDate());
@@ -60,7 +68,7 @@ public class EventService {
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
         dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(event.getConfirmedRequests());
+        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
         dto.setEventDate(event.getEventDate());
         dto.setInitiator(toUserShort(event.getInitiator()));
         dto.setPaid(event.getPaid());
@@ -83,11 +91,10 @@ public class EventService {
         return dto;
     }
 
-    // ==================== PRIVATE API (для пользователей) ====================
+    // ==================== PRIVATE API ====================
 
     @Transactional
     public EventFullDto create(Long userId, NewEventDto dto) {
-        // Проверка: дата события не ранее, чем за 2 часа от текущего момента
         if (dto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
             throw new BadRequestException("Дата события должна быть не ранее чем через 2 часа от текущего момента");
         }
@@ -136,12 +143,10 @@ public class EventService {
                 .orElseThrow(() -> new NotFoundException(
                         "Событие с id=" + eventId + " не найдено у пользователя с id=" + userId));
 
-        // Можно изменять только отменённые или ожидающие модерацию события
         if (event.getState() != EventState.PENDING && event.getState() != EventState.CANCELED) {
             throw new ConflictException("Редактировать можно только отменённые или ожидающие модерацию события");
         }
 
-        // Обновление полей, если они не null
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getCategory() != null) {
             Category category = categoryRepository.findById(dto.getCategory())
@@ -161,7 +166,6 @@ public class EventService {
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
         if (dto.getTitle() != null) event.setTitle(dto.getTitle());
 
-        // Обработка изменения состояния
         if (dto.getStateAction() != null) {
             if (dto.getStateAction().equals("SEND_TO_REVIEW")) {
                 event.setState(EventState.PENDING);
@@ -177,21 +181,23 @@ public class EventService {
 
     public List<EventShortDto> searchPublic(String text, List<Long> categories, Boolean paid,
                                             LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                            Boolean onlyAvailable, String sort,
-                                            int from, int size) {
+                                            Boolean onlyAvailable, String sort, int from, int size) {
         Pageable pageable = PageRequest.of(from / size, size);
 
-        // Если диапазон дат не указан, берём события, которые произойдут позже текущего момента
         if (rangeStart == null) rangeStart = LocalDateTime.now();
         if (rangeEnd == null) rangeEnd = LocalDateTime.now().plusYears(100);
 
-        // Валидация дат
         if (rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Дата начала диапазона не может быть позже даты конца");
         }
 
-        return eventRepository.searchPublic(text, categories, paid, rangeStart, rangeEnd, pageable)
-                .stream()
+        Page<Event> eventPage = eventRepository.searchPublic(text, categories, paid,
+                rangeStart, rangeEnd, pageable);
+
+        List<Event> events = eventPage.getContent();
+        enrichEventsWithViews(events);
+
+        return events.stream()
                 .map(this::toShortDto)
                 .collect(Collectors.toList());
     }
@@ -200,11 +206,11 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
 
-        // Публично доступны только опубликованные события
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Событие с id=" + eventId + " не найдено");
         }
 
+        enrichEventsWithViews(List.of(event));
         return toFullDto(event);
     }
 
@@ -229,7 +235,6 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
 
-        // Обновление полей, если они не null
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getCategory() != null) {
             Category category = categoryRepository.findById(dto.getCategory())
@@ -238,9 +243,9 @@ public class EventService {
         }
         if (dto.getDescription() != null) event.setDescription(dto.getDescription());
         if (dto.getEventDate() != null) {
-            // При публикации дата события должна быть не ранее чем за 1 час
+            // Валидация: за час до публикации → теперь BadRequestException вместо ConflictException
             if (dto.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
-                throw new ConflictException("Дата начала события должна быть не ранее чем за час от даты публикации");
+                throw new BadRequestException("Дата начала события должна быть не ранее чем за час от даты публикации");
             }
             event.setEventDate(dto.getEventDate());
         }
@@ -250,7 +255,6 @@ public class EventService {
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
         if (dto.getTitle() != null) event.setTitle(dto.getTitle());
 
-        // Обработка изменения состояния (публикация/отклонение)
         if (dto.getStateAction() != null) {
             if (dto.getStateAction().equals("PUBLISH_EVENT")) {
                 if (event.getState() != EventState.PENDING) {
@@ -267,5 +271,38 @@ public class EventService {
         }
 
         return toFullDto(eventRepository.save(event));
+    }
+
+    // ==================== Статистика ====================
+
+    private void enrichEventsWithViews(List<Event> events) {
+        if (events.isEmpty()) return;
+
+        List<String> uris = events.stream()
+                .map(event -> "/events/" + event.getId())
+                .collect(Collectors.toList());
+
+        try {
+            List<ViewStatsDto> stats = statsClient.getStats(
+                    LocalDateTime.now().minusYears(5),
+                    LocalDateTime.now().plusYears(1),
+                    uris,
+                    true
+            );
+
+            Map<String, Long> viewsMap = stats.stream()
+                    .collect(Collectors.toMap(
+                            ViewStatsDto::getUri,
+                            ViewStatsDto::getHits,
+                            (a, b) -> a > b ? a : b
+                    ));
+
+            events.forEach(event -> {
+                Long views = viewsMap.getOrDefault("/events/" + event.getId(), 0L);
+                event.setViews(views);
+            });
+        } catch (Exception e) {
+            System.err.println("Не удалось получить статистику просмотров: " + e.getMessage());
+        }
     }
 }

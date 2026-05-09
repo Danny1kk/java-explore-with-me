@@ -9,6 +9,7 @@ import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
 import ru.practicum.event.repository.EventRepository;
+import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 
@@ -24,6 +25,9 @@ public class CategoryService {
 
     @Transactional
     public CategoryDto create(NewCategoryDto dto) {
+        if (dto.getName().length() > 50) {
+            throw new BadRequestException("Имя категории не может быть длиннее 50 символов");
+        }
         if (categoryRepository.existsByName(dto.getName())) {
             throw new ConflictException("Категория с именем \"" + dto.getName() + "\" уже существует");
         }
@@ -34,6 +38,9 @@ public class CategoryService {
 
     @Transactional
     public CategoryDto update(Long catId, CategoryDto dto) {
+        if (dto.getName() != null && dto.getName().length() > 50) {
+            throw new BadRequestException("Имя категории не может быть длиннее 50 символов");
+        }
         Category category = categoryRepository.findById(catId)
                 .orElseThrow(() -> new NotFoundException("Категория с id=" + catId + " не найдена"));
         if (!category.getName().equals(dto.getName()) && categoryRepository.existsByName(dto.getName())) {
@@ -48,7 +55,6 @@ public class CategoryService {
         Category category = categoryRepository.findById(catId)
                 .orElseThrow(() -> new NotFoundException("Категория с id=" + catId + " не найдена"));
 
-        // Проверка на наличие связанных событий
         if (eventRepository.existsByCategoryId(catId)) {
             throw new ConflictException("Категория не является пустой");
         }
