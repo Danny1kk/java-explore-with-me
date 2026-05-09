@@ -95,7 +95,7 @@ public class ErrorHandler {
         return ApiError.builder()
                 .status(HttpStatus.CONFLICT.name())
                 .reason("Integrity constraint has been violated.")
-                .message(e.getMostSpecificCause().getMessage())
+                .message(e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : "Нарушение целостности данных")
                 .timestamp(LocalDateTime.now())
                 .build();
     }
