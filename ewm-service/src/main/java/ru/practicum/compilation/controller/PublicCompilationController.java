@@ -20,8 +20,8 @@ public class PublicCompilationController {
 
     @GetMapping
     public List<CompilationDto> getCompilations(@RequestParam(required = false) Boolean pinned,
-            @RequestParam(defaultValue = "0") @PositiveOrZero(message = "Параметр from не может быть отрицательным") int from,
-            @RequestParam(defaultValue = "10") @Positive(message = "Параметр size должен быть больше 0") int size) {
+                                                @RequestParam(defaultValue = "0") @PositiveOrZero(message = "Параметр from не может быть отрицательным") int from,
+                                                @RequestParam(defaultValue = "10") @Positive(message = "Параметр size должен быть больше 0") int size) {
         return compilationService.getCompilations(pinned, from, size);
     }
 

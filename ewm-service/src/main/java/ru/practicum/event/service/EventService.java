@@ -16,24 +16,17 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
-import ru.practicum.request.dto.EventRequestStatusUpdateResult;
-import ru.practicum.request.dto.ParticipationRequestDto;
-import ru.practicum.request.model.ParticipationRequest;
-import ru.practicum.request.model.RequestStatus;
 import ru.practicum.request.repository.RequestRepository;
+import ru.practicum.request.model.RequestStatus;
 import ru.practicum.stats.client.StatsClient;
-import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
 import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,8 +37,8 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final RequestRepository requestRepository;
     private final StatsClient statsClient;
+    private final RequestRepository requestRepository;
 
     // ==================== Вспомогательные методы маппинга ====================
 
@@ -54,7 +47,7 @@ public class EventService {
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
         dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(event.getConfirmedRequests());
+        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
         dto.setCreatedOn(event.getCreatedOn());
         dto.setDescription(event.getDescription());
         dto.setEventDate(event.getEventDate());
@@ -75,7 +68,7 @@ public class EventService {
         dto.setId(event.getId());
         dto.setAnnotation(event.getAnnotation());
         dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(event.getConfirmedRequests());
+        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
         dto.setEventDate(event.getEventDate());
         dto.setInitiator(toUserShort(event.getInitiator()));
         dto.setPaid(event.getPaid());
@@ -98,11 +91,10 @@ public class EventService {
         return dto;
     }
 
-    // ==================== PRIVATE API (для пользователей) ====================
+    // ==================== PRIVATE API ====================
 
     @Transactional
     public EventFullDto create(Long userId, NewEventDto dto) {
-        // Проверка: дата события не ранее, чем за 2 часа от текущего момента
         if (dto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
             throw new BadRequestException("Дата события должна быть не ранее чем через 2 часа от текущего момента");
         }
@@ -151,12 +143,10 @@ public class EventService {
                 .orElseThrow(() -> new NotFoundException(
                         "Событие с id=" + eventId + " не найдено у пользователя с id=" + userId));
 
-        // Можно изменять только отменённые или ожидающие модерацию события
         if (event.getState() != EventState.PENDING && event.getState() != EventState.CANCELED) {
             throw new ConflictException("Редактировать можно только отменённые или ожидающие модерацию события");
         }
 
-        // Обновление полей, если они не null
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getCategory() != null) {
             Category category = categoryRepository.findById(dto.getCategory())
@@ -176,7 +166,6 @@ public class EventService {
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
         if (dto.getTitle() != null) event.setTitle(dto.getTitle());
 
-        // Обработка изменения состояния
         if (dto.getStateAction() != null) {
             if (dto.getStateAction().equals("SEND_TO_REVIEW")) {
                 event.setState(EventState.PENDING);
@@ -193,7 +182,6 @@ public class EventService {
     public List<EventShortDto> searchPublic(String text, List<Long> categories, Boolean paid,
                                             LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                             Boolean onlyAvailable, String sort, int from, int size) {
-
         Pageable pageable = PageRequest.of(from / size, size);
 
         if (rangeStart == null) rangeStart = LocalDateTime.now();
@@ -207,8 +195,7 @@ public class EventService {
                 rangeStart, rangeEnd, pageable);
 
         List<Event> events = eventPage.getContent();
-
-        enrichEventsWithViews(events);   // ← важно!
+        enrichEventsWithViews(events);
 
         return events.stream()
                 .map(this::toShortDto)
@@ -223,8 +210,7 @@ public class EventService {
             throw new NotFoundException("Событие с id=" + eventId + " не найдено");
         }
 
-        enrichEventsWithViews(List.of(event));   // ← важно!
-
+        enrichEventsWithViews(List.of(event));
         return toFullDto(event);
     }
 
@@ -249,7 +235,6 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
 
-        // Обновление полей, если они не null
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getCategory() != null) {
             Category category = categoryRepository.findById(dto.getCategory())
@@ -258,9 +243,9 @@ public class EventService {
         }
         if (dto.getDescription() != null) event.setDescription(dto.getDescription());
         if (dto.getEventDate() != null) {
-            // При публикации дата события должна быть не ранее чем за 1 час
+            // Валидация: за час до публикации → теперь BadRequestException вместо ConflictException
             if (dto.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
-                throw new ConflictException("Дата начала события должна быть не ранее чем за час от даты публикации");
+                throw new BadRequestException("Дата начала события должна быть не ранее чем за час от даты публикации");
             }
             event.setEventDate(dto.getEventDate());
         }
@@ -270,7 +255,6 @@ public class EventService {
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
         if (dto.getTitle() != null) event.setTitle(dto.getTitle());
 
-        // Обработка изменения состояния (публикация/отклонение)
         if (dto.getStateAction() != null) {
             if (dto.getStateAction().equals("PUBLISH_EVENT")) {
                 if (event.getState() != EventState.PENDING) {
@@ -289,36 +273,14 @@ public class EventService {
         return toFullDto(eventRepository.save(event));
     }
 
-    // ==================== Методы для статистики ====================
-
-    public void saveHit(Long eventId, String ip) {
-        try {
-            statsClient.hit(EndpointHitDto.builder()
-                    .app("ewm-main-service")
-                    .uri("/events/" + eventId)
-                    .ip(ip)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        } catch (Exception e) {
-            // Статистика не должна ломать основной сервис
-            System.err.println("Не удалось отправить hit для события " + eventId + ": " + e.getMessage());
-            // или используй log.error(...)
-        }
-    }
-
-    public void saveHitForEvents(List<EventShortDto> events, String ip) {
-        if (events == null || events.isEmpty()) {
-            return;
-        }
-        events.forEach(event -> saveHit(event.getId(), ip));
-    }
+    // ==================== Статистика ====================
 
     private void enrichEventsWithViews(List<Event> events) {
         if (events.isEmpty()) return;
 
         List<String> uris = events.stream()
                 .map(event -> "/events/" + event.getId())
-                .toList();
+                .collect(Collectors.toList());
 
         try {
             List<ViewStatsDto> stats = statsClient.getStats(
@@ -342,82 +304,5 @@ public class EventService {
         } catch (Exception e) {
             System.err.println("Не удалось получить статистику просмотров: " + e.getMessage());
         }
-    }
-// ==================== Методы для заявок на участие ====================
-
-    public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
-        // Проверяем, что событие принадлежит пользователю
-        Optional<Event> event = eventRepository.findByIdAndInitiatorId(eventId, userId);
-        if (event.isEmpty()) {
-            throw new NotFoundException("Event with id=" + eventId + " was not found");
-        }
-
-        return requestRepository.findByEventId(eventId).stream()
-                .map(this::toParticipationRequestDto)
-                .toList();
-    }
-
-    @Transactional
-    public EventRequestStatusUpdateResult updateEventRequestsStatus(
-            Long userId,
-            Long eventId,
-            EventRequestStatusUpdateRequest requestDto) {
-
-        Optional<Event> event = eventRepository.findByIdAndInitiatorId(eventId, userId);
-        if (event.isEmpty()) {
-            throw new NotFoundException("Event with id=" + eventId + " was not found");
-        }
-
-        RequestStatus status = RequestStatus.valueOf(requestDto.getStatus().toUpperCase());
-
-        List<ParticipationRequest> requestsToUpdate = requestRepository
-                .findAllByIdInAndEventIdAndStatus(requestDto.getRequestIds(), eventId, RequestStatus.PENDING);
-
-        if (requestsToUpdate.size() != requestDto.getRequestIds().size()) {
-            throw new ConflictException("Request must have status PENDING");
-        }
-
-        List<ParticipationRequest> confirmed = new ArrayList<>();
-        List<ParticipationRequest> rejected = new ArrayList<>();
-
-        if (status == RequestStatus.REJECTED) {
-            requestsToUpdate.forEach(req -> {
-                req.setStatus(RequestStatus.REJECTED);
-                rejected.add(req);
-            });
-        } else { // CONFIRMED
-            long alreadyConfirmed = requestRepository.countConfirmedRequests(eventId);
-            int limit = event.get().getParticipantLimit();
-
-            int availableSlots = (limit == 0) ? Integer.MAX_VALUE : limit - (int) alreadyConfirmed;
-
-            for (ParticipationRequest req : requestsToUpdate) {
-                if (availableSlots > 0) {
-                    req.setStatus(RequestStatus.CONFIRMED);
-                    confirmed.add(req);
-                    availableSlots--;
-                } else {
-                    req.setStatus(RequestStatus.REJECTED);
-                    rejected.add(req);
-                }
-            }
-        }
-
-        requestRepository.saveAll(requestsToUpdate);
-
-        return EventRequestStatusUpdateResult.builder()
-                .confirmedRequests(confirmed.stream().map(this::toParticipationRequestDto).toList())
-                .rejectedRequests(rejected.stream().map(this::toParticipationRequestDto).toList())
-                .build();
-    }
-
-    private ParticipationRequestDto toParticipationRequestDto(ParticipationRequest request) {
-        return ParticipationRequestDto.builder()
-                .id(request.getId())
-                .created(request.getCreated())
-                .event(request.getEvent().getId())
-                .requester(request.getRequester().getId())
-                .status(request.getStatus().name())
-                .build();
     }
 }

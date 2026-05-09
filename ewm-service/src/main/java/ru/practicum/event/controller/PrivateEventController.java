@@ -11,6 +11,7 @@ import ru.practicum.event.service.EventService;
 import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.request.dto.EventRequestStatusUpdateResult;
 import ru.practicum.request.dto.ParticipationRequestDto;
+import ru.practicum.request.service.RequestService;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.List;
 public class PrivateEventController {
 
     private final EventService eventService;
+    private final RequestService requestService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -49,21 +51,17 @@ public class PrivateEventController {
         return eventService.updateByUser(userId, eventId, dto);
     }
 
-    // === Новый GET ===
+    // Методы для запросов
     @GetMapping("/{eventId}/requests")
-    public List<ParticipationRequestDto> getEventRequests(
-            @PathVariable Long userId,
-            @PathVariable Long eventId) {
-        return eventService.getEventRequests(userId, eventId);
+    public List<ParticipationRequestDto> getEventRequests(@PathVariable Long userId,
+                                                          @PathVariable Long eventId) {
+        return requestService.getEventRequests(userId, eventId);
     }
 
-    // === Новый PATCH ===
     @PatchMapping("/{eventId}/requests")
-    public EventRequestStatusUpdateResult updateRequestStatus(
-            @PathVariable Long userId,
-            @PathVariable Long eventId,
-            @Valid @RequestBody EventRequestStatusUpdateRequest request) {
-
-        return eventService.updateEventRequestsStatus(userId, eventId, request);
+    public EventRequestStatusUpdateResult updateRequests(@PathVariable Long userId,
+                                                         @PathVariable Long eventId,
+                                                         @Valid @RequestBody EventRequestStatusUpdateRequest request) {
+        return requestService.updateRequestsStatus(userId, eventId, request);
     }
 }

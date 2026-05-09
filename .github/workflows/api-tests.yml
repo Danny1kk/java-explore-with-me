@@ -1,7 +1,7 @@
 name: Explore With Me API Tests
 
 on:
-# pull_request:  # Временно отключено до реализации всех эндпоинтов
+ pull_request:
 
 jobs:
   build:
