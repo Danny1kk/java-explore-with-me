@@ -6,11 +6,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.enums.EventState;
+import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.BadRequestException;
@@ -20,7 +20,6 @@ import ru.practicum.request.repository.RequestRepository;
 import ru.practicum.request.model.RequestStatus;
 import ru.practicum.stats.client.StatsClient;
 import ru.practicum.stats.dto.ViewStatsDto;
-import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
@@ -39,57 +38,7 @@ public class EventService {
     private final CategoryRepository categoryRepository;
     private final StatsClient statsClient;
     private final RequestRepository requestRepository;
-
-    // ==================== Вспомогательные методы маппинга ====================
-
-    private EventFullDto toFullDto(Event event) {
-        EventFullDto dto = new EventFullDto();
-        dto.setId(event.getId());
-        dto.setAnnotation(event.getAnnotation());
-        dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
-        dto.setCreatedOn(event.getCreatedOn());
-        dto.setDescription(event.getDescription());
-        dto.setEventDate(event.getEventDate());
-        dto.setInitiator(toUserShort(event.getInitiator()));
-        dto.setLocation(event.getLocation());
-        dto.setPaid(event.getPaid());
-        dto.setParticipantLimit(event.getParticipantLimit());
-        dto.setPublishedOn(event.getPublishedOn());
-        dto.setRequestModeration(event.getRequestModeration());
-        dto.setState(event.getState().name());
-        dto.setTitle(event.getTitle());
-        dto.setViews(event.getViews() != null ? event.getViews() : 0);
-        return dto;
-    }
-
-    private EventShortDto toShortDto(Event event) {
-        EventShortDto dto = new EventShortDto();
-        dto.setId(event.getId());
-        dto.setAnnotation(event.getAnnotation());
-        dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED));
-        dto.setEventDate(event.getEventDate());
-        dto.setInitiator(toUserShort(event.getInitiator()));
-        dto.setPaid(event.getPaid());
-        dto.setTitle(event.getTitle());
-        dto.setViews(event.getViews() != null ? event.getViews() : 0);
-        return dto;
-    }
-
-    private UserShortDto toUserShort(User user) {
-        UserShortDto dto = new UserShortDto();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        return dto;
-    }
-
-    private CategoryDto toCategoryDto(Category category) {
-        CategoryDto dto = new CategoryDto();
-        dto.setId(category.getId());
-        dto.setName(category.getName());
-        return dto;
-    }
+    private final EventMapper eventMapper;
 
     // ==================== PRIVATE API ====================
 
@@ -119,14 +68,18 @@ public class EventService {
         event.setState(EventState.PENDING);
         event.setCreatedOn(LocalDateTime.now());
 
-        return toFullDto(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        return eventMapper.toFullDto(saved, 0L, 0L);
     }
 
     public List<EventShortDto> getByUser(Long userId, int from, int size) {
         Pageable pageable = PageRequest.of(from / size, size);
         return eventRepository.findByInitiatorId(userId, pageable)
                 .stream()
-                .map(this::toShortDto)
+                .map(event -> {
+                    Long confirmed = requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+                    return eventMapper.toShortDto(event, confirmed, event.getViews());
+                })
                 .collect(Collectors.toList());
     }
 
@@ -134,7 +87,8 @@ public class EventService {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException(
                         "Событие с id=" + eventId + " не найдено у пользователя с id=" + userId));
-        return toFullDto(event);
+        Long confirmed = requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        return eventMapper.toFullDto(event, confirmed, event.getViews());
     }
 
     @Transactional
@@ -174,7 +128,9 @@ public class EventService {
             }
         }
 
-        return toFullDto(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        Long confirmed = requestRepository.countByEventIdAndStatus(saved.getId(), RequestStatus.CONFIRMED);
+        return eventMapper.toFullDto(saved, confirmed, saved.getViews());
     }
 
     // ==================== PUBLIC API ====================
@@ -198,7 +154,10 @@ public class EventService {
         enrichEventsWithViews(events);
 
         return events.stream()
-                .map(this::toShortDto)
+                .map(event -> {
+                    Long confirmed = requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+                    return eventMapper.toShortDto(event, confirmed, event.getViews());
+                })
                 .collect(Collectors.toList());
     }
 
@@ -211,7 +170,8 @@ public class EventService {
         }
 
         enrichEventsWithViews(List.of(event));
-        return toFullDto(event);
+        Long confirmed = requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        return eventMapper.toFullDto(event, confirmed, event.getViews());
     }
 
     // ==================== ADMIN API ====================
@@ -226,7 +186,10 @@ public class EventService {
 
         return eventRepository.searchAdmin(users, states, categories, rangeStart, rangeEnd, pageable)
                 .stream()
-                .map(this::toFullDto)
+                .map(event -> {
+                    Long confirmed = requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+                    return eventMapper.toFullDto(event, confirmed, event.getViews());
+                })
                 .collect(Collectors.toList());
     }
 
@@ -243,7 +206,6 @@ public class EventService {
         }
         if (dto.getDescription() != null) event.setDescription(dto.getDescription());
         if (dto.getEventDate() != null) {
-            // Валидация: за час до публикации → теперь BadRequestException вместо ConflictException
             if (dto.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
                 throw new BadRequestException("Дата начала события должна быть не ранее чем за час от даты публикации");
             }
@@ -270,7 +232,9 @@ public class EventService {
             }
         }
 
-        return toFullDto(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        Long confirmed = requestRepository.countByEventIdAndStatus(saved.getId(), RequestStatus.CONFIRMED);
+        return eventMapper.toFullDto(saved, confirmed, saved.getViews());
     }
 
     // ==================== Статистика ====================

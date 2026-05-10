@@ -4,24 +4,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.compilation.dto.CompilationDto;
 import ru.practicum.compilation.dto.NewCompilationDto;
 import ru.practicum.compilation.dto.UpdateCompilationRequest;
+import ru.practicum.compilation.mapper.CompilationMapper;
 import ru.practicum.compilation.model.Compilation;
 import ru.practicum.compilation.repository.CompilationRepository;
-import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.user.dto.UserShortDto;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +24,7 @@ public class CompilationService {
 
     private final CompilationRepository compilationRepository;
     private final EventRepository eventRepository;
+    private final CompilationMapper compilationMapper;
 
     @Transactional
     public CompilationDto create(NewCompilationDto dto) {
@@ -39,8 +33,10 @@ public class CompilationService {
         compilation.setPinned(Boolean.TRUE.equals(dto.getPinned()));
         compilation.setEvents(resolveEvents(dto.getEvents()));
 
-        Compilation savedCompilation = compilationRepository.save(compilation);
-        return toDto(getDetailedCompilation(savedCompilation.getId()));
+        Compilation saved = compilationRepository.save(compilation);
+        Compilation detailed = compilationRepository.findDetailedById(saved.getId())
+                .orElseThrow(() -> new NotFoundException("Compilation with id=" + saved.getId() + " was not found"));
+        return compilationMapper.toDto(detailed);
     }
 
     @Transactional
@@ -59,7 +55,9 @@ public class CompilationService {
         }
 
         compilationRepository.save(compilation);
-        return toDto(getDetailedCompilation(compilation.getId()));
+        Compilation detailed = compilationRepository.findDetailedById(compilation.getId())
+                .orElseThrow(() -> new NotFoundException("Compilation with id=" + compilation.getId() + " was not found"));
+        return compilationMapper.toDto(detailed);
     }
 
     @Transactional
@@ -83,18 +81,15 @@ public class CompilationService {
         }
 
         return compilationRepository.findAllDetailedByIdIn(compilationIds).stream()
-                .sorted(Comparator.comparingInt(compilation -> orderById.getOrDefault(compilation.getId(), Integer.MAX_VALUE)))
-                .map(this::toDto)
+                .sorted(Comparator.comparingInt(c -> orderById.getOrDefault(c.getId(), Integer.MAX_VALUE)))
+                .map(compilationMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     public CompilationDto getCompilation(Long compId) {
-        return toDto(getDetailedCompilation(compId));
-    }
-
-    private Compilation getDetailedCompilation(Long compId) {
-        return compilationRepository.findDetailedById(compId)
+        Compilation detailed = compilationRepository.findDetailedById(compId)
                 .orElseThrow(() -> new NotFoundException("Compilation with id=" + compId + " was not found"));
+        return compilationMapper.toDto(detailed);
     }
 
     private Set<Event> resolveEvents(Set<Long> eventIds) {
@@ -108,7 +103,7 @@ public class CompilationService {
                     .map(Event::getId)
                     .collect(Collectors.toSet());
             Long missingEventId = eventIds.stream()
-                    .filter(eventId -> !foundIds.contains(eventId))
+                    .filter(id -> !foundIds.contains(id))
                     .findFirst()
                     .orElse(null);
             throw new NotFoundException("Event with id=" + missingEventId + " was not found");
@@ -117,45 +112,5 @@ public class CompilationService {
         return events.stream()
                 .sorted(Comparator.comparing(Event::getId))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    private CompilationDto toDto(Compilation compilation) {
-        CompilationDto dto = new CompilationDto();
-        dto.setId(compilation.getId());
-        dto.setPinned(compilation.getPinned());
-        dto.setTitle(compilation.getTitle());
-        dto.setEvents(compilation.getEvents().stream()
-                .sorted(Comparator.comparing(Event::getId))
-                .map(this::toShortDto)
-                .collect(Collectors.toList()));
-        return dto;
-    }
-
-    private EventShortDto toShortDto(Event event) {
-        EventShortDto dto = new EventShortDto();
-        dto.setId(event.getId());
-        dto.setAnnotation(event.getAnnotation());
-        dto.setCategory(toCategoryDto(event.getCategory()));
-        dto.setConfirmedRequests(event.getConfirmedRequests());
-        dto.setEventDate(event.getEventDate());
-        dto.setInitiator(toUserShort(event.getInitiator()));
-        dto.setPaid(event.getPaid());
-        dto.setTitle(event.getTitle());
-        dto.setViews(event.getViews() != null ? event.getViews() : 0);
-        return dto;
-    }
-
-    private UserShortDto toUserShort(ru.practicum.user.model.User user) {
-        UserShortDto dto = new UserShortDto();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        return dto;
-    }
-
-    private CategoryDto toCategoryDto(ru.practicum.category.model.Category category) {
-        CategoryDto dto = new CategoryDto();
-        dto.setId(category.getId());
-        dto.setName(category.getName());
-        return dto;
     }
 }
