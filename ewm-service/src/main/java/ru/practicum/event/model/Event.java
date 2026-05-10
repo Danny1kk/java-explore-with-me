@@ -5,10 +5,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ru.practicum.category.model.Category;
 import ru.practicum.event.enums.EventState;
+import ru.practicum.request.model.ParticipationRequest;
 import ru.practicum.user.model.User;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "events")
@@ -86,4 +89,7 @@ public class Event {
     // Количество просмотров (вычисляемое поле)
     @Transient
     private Long views;
+
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<ParticipationRequest> requests = new ArrayList<>();
 }
