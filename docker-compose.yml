@@ -7,6 +7,7 @@ services:
     ports:
       - "9090:9090"
     environment:
+      - SERVER_PORT=9090
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - SPRING_DATASOURCE_USERNAME=practicum
       - SPRING_DATASOURCE_PASSWORD=practicum
@@ -15,11 +16,11 @@ services:
       stats-db:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9090/actuator/health" ]
-      interval: 5s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/actuator/health || exit 1"]
+      interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 15s
+      start_period: 25s
 
   stats-db:
     image: postgres:14-alpine
