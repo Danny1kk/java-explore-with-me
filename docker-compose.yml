@@ -10,6 +10,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - SPRING_DATASOURCE_USERNAME=practicum
       - SPRING_DATASOURCE_PASSWORD=practicum
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
       stats-db:
         condition: service_healthy
