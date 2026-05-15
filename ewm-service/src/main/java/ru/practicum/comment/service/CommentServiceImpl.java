@@ -1,10 +1,14 @@
 package ru.practicum.comment.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.comment.dto.*;
+import ru.practicum.comment.dto.CommentDto;
+import ru.practicum.comment.dto.CommentShortDto;
+import ru.practicum.comment.dto.NewCommentDto;
+import ru.practicum.comment.dto.UpdateCommentAdminRequest;
 import ru.practicum.comment.mapper.CommentMapper;
 import ru.practicum.comment.model.Comment;
 import ru.practicum.comment.model.CommentStatus;
@@ -129,19 +133,41 @@ public class CommentServiceImpl implements CommentService {
     }
 
     // ==================== ADMIN API (заглушки для будущего этапа) ====================
+    @Override
+    public List<CommentDto> getCommentsAdmin(String rangeStart, String rangeEnd, List<Long> users,
+                                             String text, Integer from, Integer size) {
+        PageRequest pageable = PageRequest.of(from / size, size);
+
+        LocalDateTime start = parseDate(rangeStart);
+        LocalDateTime end = parseDate(rangeEnd);
+
+        Page<Comment> page = commentRepository.searchAdmin(users, text, start, end, pageable);
+
+        return page.getContent().stream()
+                .map(CommentMapper::returnCommentDto)
+                .collect(Collectors.toList());
+    }
 
     @Override
-    public List<CommentDto> getComments(String rangeStart, String rangeEnd, Integer from, Integer size) {
-        return List.of(); // Будет реализовано на этапе III
+    @Transactional
+    public CommentDto updateCommentAdmin(Long commentId, UpdateCommentAdminRequest request) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Комментарий с id=" + commentId + " не найден"));
+
+        CommentStatus newStatus = CommentStatus.valueOf(request.getStatus().toUpperCase());
+
+        comment.setStatus(newStatus);
+        return CommentMapper.returnCommentDto(commentRepository.save(comment));
     }
 
     @Override
     @Transactional
     public void deleteAdminComment(Long commentId) {
-        // Будет реализовано на этапе III
-        throw new UnsupportedOperationException("Метод ещё не реализован.");
+        if (!commentRepository.existsById(commentId)) {
+            throw new NotFoundException("Комментарий с id=" + commentId + " не найден");
+        }
+        commentRepository.deleteById(commentId);
     }
-
     // ==================== Вспомогательные методы ====================
 
     private CommentShortDto toCommentShortDto(Comment comment) {
