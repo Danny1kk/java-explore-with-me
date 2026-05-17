@@ -12,6 +12,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import javax.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 
 @RestControllerAdvice
 public class ErrorHandler {
@@ -67,7 +68,12 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
+    @ExceptionHandler({
+            MethodArgumentTypeMismatchException.class,
+            HttpMessageNotReadableException.class,
+            MissingServletRequestParameterException.class,
+            DateTimeParseException.class
+    })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleRequestParsing(Exception e) {
         return ApiError.builder()
