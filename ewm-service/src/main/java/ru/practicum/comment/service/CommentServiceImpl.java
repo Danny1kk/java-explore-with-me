@@ -105,6 +105,10 @@ public class CommentServiceImpl implements CommentService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id " + userId + " не найден."));
 
+        LocalDateTime start = parseDate(rangeStart);
+        LocalDateTime end = parseDate(rangeEnd);
+        validateDateRange(start, end);
+
         PageRequest pageable = PageRequest.of(from / size, size);
         List<Comment> comments = commentRepository.findAllByAuthorId(userId, pageable);
 
@@ -121,6 +125,10 @@ public class CommentServiceImpl implements CommentService {
         // Проверка существования события
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено."));
+
+        LocalDateTime start = parseDate(rangeStart);
+        LocalDateTime end = parseDate(rangeEnd);
+        validateDateRange(start, end);
 
         PageRequest pageable = PageRequest.of(from / size, size);
         List<Comment> comments = commentRepository.findAllByEventId(eventId, pageable);
@@ -140,6 +148,7 @@ public class CommentServiceImpl implements CommentService {
 
         LocalDateTime start = parseDate(rangeStart);
         LocalDateTime end = parseDate(rangeEnd);
+        validateDateRange(start, end);
 
         Page<Comment> page = commentRepository.searchAdmin(users, text, start, end, pageable);
 
@@ -184,5 +193,11 @@ public class CommentServiceImpl implements CommentService {
             return null;
         }
         return LocalDateTime.parse(dateStr, FORMATTER);
+    }
+
+    private void validateDateRange(LocalDateTime start, LocalDateTime end) {
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new BadRequestException("Дата начала диапазона не может быть позже даты конца.");
+        }
     }
 }
