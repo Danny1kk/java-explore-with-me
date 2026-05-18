@@ -14,3 +14,33 @@
 - [x] Спроектировать API для управления локациями
 - [x] Реализовать функцию `distance` в миграциях базы данных
 - [x] Добавить поиск событий по радиусу от координат
+
+## Comments API
+
+Для feature комментариев добавлены и поддерживаются следующие endpoint'ы:
+
+- `POST /users/{userId}/comments/{eventId}`: создать комментарий к опубликованному событию.
+- `PATCH /users/{userId}/comments/{commentId}`: отредактировать свой комментарий.
+- `DELETE /users/{userId}/comments/{commentId}`: удалить свой комментарий.
+- `GET /users/{userId}/comments`: получить комментарии пользователя.
+- `GET /comments/{eventId}`: получить опубликованные комментарии события.
+- `GET /admin/comments`: поиск комментариев для администратора.
+- `PATCH /admin/comments/{commentId}`: изменить статус комментария, например `PUBLISHED`.
+- `DELETE /admin/comments/{commentId}`: удалить комментарий от имени администратора.
+
+Ошибки для comment API нормализованы через общий `ErrorHandler`:
+
+- `404 NOT_FOUND`: пользователь, событие или комментарий не найдены.
+- `409 CONFLICT`: попытка изменить или удалить чужой комментарий.
+- `400 BAD_REQUEST`: пустой текст комментария, неверный формат `rangeStart/rangeEnd`
+  (`yyyy-MM-dd HH:mm:ss`) и невалидные query-параметры пагинации.
+
+## Postman
+
+Коллекция [postman/feature.json](/Users/ilyapelikh/Desktop/java-explore-with-me/postman/feature.json)
+содержит:
+
+- подготовку данных для сценариев комментариев;
+- happy path: создание, модерацию, получение и удаление комментария;
+- error cases: удаление чужого комментария, комментарий к несуществующему событию,
+  ошибки `404`, `409` и `400`.
