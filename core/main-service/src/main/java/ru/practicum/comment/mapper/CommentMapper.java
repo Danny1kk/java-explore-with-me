@@ -1,26 +1,26 @@
 package ru.practicum.comment.mapper;
 
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.UtilityClass;
-import org.springframework.stereotype.Component;
 import ru.practicum.comment.dto.*;
 import ru.practicum.comment.model.Comment;
 import ru.practicum.comment.model.CommentStatus;
-import ru.practicum.user.UserClient;
+import ru.practicum.event.model.Event;
+import ru.practicum.user.model.User;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
-@RequiredArgsConstructor
+@UtilityClass
 public class CommentMapper {
 
-    public static Comment returnComment(NewCommentDto dto, Long userId, Long eventId) {
+    public static Comment returnComment(NewCommentDto dto, User user, Event event) {
         return Comment.builder()
-                .authorId(userId)
-                .eventId(eventId)
+                .author(user)
+                .event(event)
                 .text(dto.getText())
                 .status(CommentStatus.PENDING)
+                .created(LocalDateTime.now())
                 .build();
     }
 
@@ -28,8 +28,8 @@ public class CommentMapper {
         return CommentDto.builder()
                 .id(comment.getId())
                 .text(comment.getText())
-                .eventId(comment.getEventId())
-                .authorName(authorName != null ? authorName : "User #" + comment.getAuthorId())
+                .eventId(comment.getEvent().getId())
+                .authorName(comment.getAuthor().getName())
                 .created(comment.getCreated())
                 .status(comment.getStatus().name())
                 .build();

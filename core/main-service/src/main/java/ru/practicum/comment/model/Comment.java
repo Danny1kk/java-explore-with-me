@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
+import ru.practicum.event.model.Event;
+import ru.practicum.user.model.User;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -24,11 +27,11 @@ public class Comment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
-    Long eventId;
+    Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
-    Long authorId;
+    User author;
 
     @CreationTimestamp
     @Column(name = "created")
