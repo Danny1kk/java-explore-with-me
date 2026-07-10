@@ -53,8 +53,12 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - stats-db
-      - discovery-server
+      stats-db:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
 
   main-service:
     container_name: main-service
@@ -64,5 +68,9 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - main-db
-      - discovery-server
+      main-db:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
