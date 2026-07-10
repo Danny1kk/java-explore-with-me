@@ -1,17 +1,34 @@
 services:
-  stats-server:
-    ports:
-      - "9090:9090"
-
   stats-db:
     image: postgres:16.1
 
-  main-service:
-    image: main-service
+  stats-server:
+    container_name: stats-server
+    build:
+      context: .
+      dockerfile: stats-service/server/Dockerfile
+    ports:
+      - "9090:9090"
+    depends_on:
+      - stats-db
 
   main-db:
     image: postgres:16.1
 
+  main-service:
+    container_name: main-service
+    build:
+      context: .
+      dockerfile: core/main-service/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - main-db
+
   gateway-server:
+    container_name: gateway-server
+    build:
+      context: .
+      dockerfile: infra/gateway-server/Dockerfile
     ports:
       - "8080:8080"
