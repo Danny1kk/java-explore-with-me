@@ -84,15 +84,13 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>repackage</id>
-                        <phase>package</phase> <goals>
-                        <goal>repackage</goal>
-                    </goals>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
                     </execution>
                 </executions>
                 <configuration>
                     <mainClass>ru.practicum.EwmService</mainClass>
-                    <layout>JAR</layout>
                 </configuration>
             </plugin>
 
