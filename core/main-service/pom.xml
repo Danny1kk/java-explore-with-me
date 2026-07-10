@@ -82,17 +82,20 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>ru.practicum.EwmService</mainClass>
-                </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
+                        <id>repackage</id>
+                        <phase>package</phase> <goals>
+                        <goal>repackage</goal>
+                    </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <mainClass>ru.practicum.EwmService</mainClass>
+                    <layout>JAR</layout>
+                </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
