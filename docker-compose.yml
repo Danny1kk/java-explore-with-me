@@ -2,6 +2,10 @@ services:
   stats-db:
     image: postgres:16.1
     container_name: stats-db
+    environment:
+      - POSTGRES_USER=practicum
+      - POSTGRES_PASSWORD=practicum
+      - POSTGRES_DB=stats
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U practicum -d stats" ]
       interval: 3s
@@ -11,6 +15,10 @@ services:
   main-db:
     image: postgres:16.1
     container_name: main-db
+    environment:
+      - POSTGRES_USER=practicum
+      - POSTGRES_PASSWORD=practicum
+      - POSTGRES_DB=ewm
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U practicum -d ewm" ]
       interval: 3s
@@ -64,6 +72,8 @@ services:
       dockerfile: stats-service/server/Dockerfile
     ports:
       - "9090:9090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=boot
     depends_on:
       stats-db:
         condition: service_healthy
@@ -79,6 +89,8 @@ services:
       dockerfile: core/main-service/Dockerfile
     ports:
       - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=boot
     depends_on:
       main-db:
         condition: service_healthy
