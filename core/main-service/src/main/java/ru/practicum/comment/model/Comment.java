@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
-import ru.practicum.event.model.Event;
-import ru.practicum.user.model.User;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comments")
