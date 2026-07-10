@@ -1,9 +1,21 @@
 services:
   stats-db:
     image: postgres:16.1
+    container_name: stats-db
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U practicum -d stats" ]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   main-db:
     image: postgres:16.1
+    container_name: main-db
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U practicum -d ewm" ]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   config-server:
     container_name: config-server
@@ -54,7 +66,7 @@ services:
       - "9090:9090"
     depends_on:
       stats-db:
-        condition: service_started
+        condition: service_healthy
       config-server:
         condition: service_healthy
       discovery-server:
@@ -69,7 +81,7 @@ services:
       - "8081:8081"
     depends_on:
       main-db:
-        condition: service_started
+        condition: service_healthy
       config-server:
         condition: service_healthy
       discovery-server:
