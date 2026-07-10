@@ -82,7 +82,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>ru.yandex.practicum.EwmService</mainClass>
+                    <mainClass>ru.practicum.EwmService</mainClass>
                 </configuration>
                 <executions>
                     <execution>
