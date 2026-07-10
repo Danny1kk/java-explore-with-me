@@ -1,6 +1,6 @@
 package ru.practicum.stats.model;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
